@@ -1,0 +1,23 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CEAT Alignment Queue</title>
+<style>body{font-family:Arial;margin:0;background:#f3f4f6;color:#111827}header{background:#e30613;color:#fff;padding:18px;font-size:24px;font-weight:900}main{max-width:1000px;margin:auto;padding:16px}.card{background:#fff;padding:18px;border-radius:14px;margin:14px 0;box-shadow:0 2px 10px #0001}input,select,button{padding:11px;margin:4px;border-radius:8px;border:1px solid #ddd}input,select{width:100%;box-sizing:border-box}button{background:#e30613;color:#fff;border:0;font-weight:bold}.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.now{background:#111827;color:#fff;text-align:center;padding:22px;border-radius:12px}.token{font-size:60px;font-weight:900}table{width:100%;border-collapse:collapse}td,th{padding:10px;border-bottom:1px solid #eee;text-align:left}.tv .now{padding:40px}.tv .token{font-size:110px}.tv .vehicle{font-size:36px;font-weight:bold}.tv .tech{font-size:28px;margin:10px}.tv table{background:#171a22;color:#fff}.tv td,.tv th{border-color:#333}@media(max-width:650px){.grid{grid-template-columns:1fr}}</style></head>
+<body><header>CEAT • SRI HARI TYRES — <span id="title"></span></header><main id="app"></main>
+<script type="module">
+import{initializeApp}from"https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+import{getDatabase,ref,onValue,set}from"https://www.gstatic.com/firebasejs/12.1.0/firebase-database.js";
+const firebaseConfig={apiKey:"AIzaSyBK0In5N5EvmC25Ue6IvDt-icCP1JezqOI",authDomain:"ceat-alignment-queue.firebaseapp.com",databaseURL:"https://ceat-alignment-queue-default-rtdb.asia-southeast1.firebasedatabase.app",projectId:"ceat-alignment-queue",storageBucket:"ceat-alignment-queue.firebasestorage.app",messagingSenderId:"481982113916",appId:"1:481982113916:web:12a6a08c214755df6c41f9"};
+const db=getDatabase(initializeApp(firebaseConfig)),qr=ref(db,"queue"),tv=new URLSearchParams(location.search).get("tv")==="1";
+document.body.className=tv?"tv":"";document.getElementById("title").textContent=tv?"CUSTOMER DISPLAY":"STAFF CONTROL";
+const techs=["Aravind","Arjun","Arivazhagan","Sarath","Venkatesh","Vijay"];
+let s={items:[],current:null,next:1,completed:0};
+onValue(qr,x=>{s=x.val()||{items:[],current:null,next:1,completed:0};render()});
+const save=()=>set(qr,s);
+window.add=async()=>{let v=vehicle.value.trim().toUpperCase();if(!v)return alert("Enter vehicle number");s.items.push({token:"A"+String(s.next++).padStart(2,"0"),vehicle:v,model:model.value||"Vehicle",service:service.value,tech:technician.value});vehicle.value=model.value="";await save()};
+window.serve=async()=>{if(s.current)return alert("Complete current vehicle first");if(!s.items.length)return;s.current=s.items.shift();await save()};
+window.done=async()=>{if(!s.current)return;s.current=null;s.completed=(s.completed||0)+1;await save()};
+window.changeTech=async(i,v)=>{s.items[i].tech=v;await save()};
+function render(){
+ if(tv){app.innerHTML=`<div class="now"><div>NOW SERVING</div><div class="token">${s.current?.token||"—"}</div><div class="vehicle">${s.current?.vehicle||"Please wait"} • ${s.current?.model||""}</div><div class="tech">${s.current?"Technician: "+s.current.tech:""}</div></div><div class="card"><h2>NEXT QUEUE</h2>${table()}</div>`}
+ else{app.innerHTML=`<div class="card"><h2>Add Vehicle</h2><div class="grid"><input id="vehicle" placeholder="Vehicle number"><input id="model" placeholder="Model"><select id="service"><option>Wheel Alignment</option><option>Alignment + Balancing</option><option>Tyre Rotation</option><option>Check-up</option></select><select id="technician">${techs.map(t=>`<option>${t}</option>`).join("")}</select></div><button onclick="add()">ADD TO QUEUE</button></div><div class="card"><h2>Now Serving</h2><div class="now"><div class="token">${s.current?.token||"—"}</div>${s.current?`${s.current.vehicle} • ${s.current.model} • ${s.current.tech}`:"No vehicle"}</div><button onclick="serve()">SERVE NEXT</button><button onclick="done()">COMPLETE</button></div><div class="card"><h2>Waiting Queue</h2>${table(true)}</div>`}
+}
+function table(edit=false){if(!s.items.length)return "<p>No vehicles waiting.</p>";return `<table><tr><th>Token</th><th>Vehicle</th><th>Service</th><th>Technician</th></tr>${s.items.map((x,i)=>`<tr><td><b>${x.token}</b></td><td>${x.vehicle} • ${x.model}</td><td>${x.service}</td><td>${edit?`<select onchange="changeTech(${i},this.value)">${techs.map(t=>`<option ${t==x.tech?"selected":""}>${t}</option>`).join("")}</select>`:"<b>"+x.tech+"</b>"}</td></tr>`).join("")}</table>`}
+</script></body></html>
