@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CEAT Alignment Queue - Sri Hari Tyres</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f2f4f7;color:#111827}
+header{background:#e30613;color:#fff;padding:16px 20px;font-weight:900;font-size:22px}header small{display:block;font-size:13px;margin-top:4px}
+main{max-width:1100px;margin:auto;padding:16px}.card{background:#fff;border-radius:16px;padding:18px;margin-bottom:16px;box-shadow:0 3px 14px #0001}
+h2{margin:0 0 14px}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+input,select,button{font:inherit;padding:12px;border-radius:9px;border:1px solid #d1d5db}button{border:0;background:#e30613;color:#fff;font-weight:800}button.secondary{background:#374151}button.green{background:#15803d}button.danger{background:#b91c1c}.full{width:100%;margin-top:10px}
+.mode{display:flex;gap:8px;margin-bottom:14px}.now{background:#111827;color:#fff;text-align:center;border-radius:15px;padding:22px}.token{font-size:64px;font-weight:900;line-height:1}.vehicle{font-size:28px;font-weight:800;margin-top:10px}.tech{font-size:20px;margin-top:8px}
+table{width:100%;border-collapse:collapse}th,td{padding:10px 7px;border-bottom:1px solid #e5e7eb;text-align:left}.empty{text-align:center;color:#6b7280;padding:20px}.badge{display:inline-block;background:#fee2e2;color:#991b1b;padding:5px 8px;border-radius:999px;font-size:12px;font-weight:800}
+.tv main{max-width:1500px;padding:28px}.tv header{text-align:center;font-size:34px;padding:20px}.tv .now{padding:45px}.tv .token{font-size:150px}.tv .vehicle{font-size:46px}.tv .tech{font-size:32px}.tv .card{background:#181b23;color:#fff}.tv th,.tv td{border-color:#30343d;font-size:22px;padding:15px}
+@media(max-width:650px){.grid{grid-template-columns:1fr}.vehicle{font-size:22px}.token{font-size:52px}}
+</style>
+</head>
+<body>
+<header>CEAT ALIGNMENT QUEUE<small>Sri Hari Tyres • Kumbakonam</small></header>
+<main id="app"></main>
+<script type="module">
+import{initializeApp}from"https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+import{getDatabase,ref,onValue,set}from"https://www.gstatic.com/firebasejs/12.1.0/firebase-database.js";
+const firebaseConfig={
+apiKey:"AIzaSyBK0In5N5EvmC25Ue6IvDt-icCP1JezqOI",
+authDomain:"ceat-alignment-queue.firebaseapp.com",
+databaseURL:"https://ceat-alignment-queue-default-rtdb.asia-southeast1.firebasedatabase.app",
+projectId:"ceat-alignment-queue",
+storageBucket:"ceat-alignment-queue.firebasestorage.app",
+messagingSenderId:"481982113916",
+appId:"1:481982113916:web:12a6a08c214755df6c41f9"};
+const db=getDatabase(initializeApp(firebaseConfig)),qr=ref(db,"queue");
+const techs=["Aravind","Arjun","Arivazhagan","Sarath","Venkatesh","Vijay"];
+let s={items:[],current:null,next:1,completed:0};
+const tv=new URLSearchParams(location.search).get("tv")==="1";
+document.body.className=tv?"tv":"";
+onValue(qr,x=>{s=x.val()||{items:[],current:null,next:1,completed:0};if(!Array.isArray(s.items))s.items=[];render()});
+const save=()=>set(qr,s);
+const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const opts=x=>techs.map(t=>`<option ${t===x?"selected":""}>${t}</option>`).join("");
+window.addVehicle=async()=>{let v=vehicle.value.trim().toUpperCase();if(!v)return alert("Enter vehicle number");s.next=s.next||1;s.items.push({token:"A"+String(s.next++).padStart(2,"0"),vehicle:v,model:model.value.trim()||"Vehicle",service:service.value,tech:technician.value});await save();vehicle.value="";model.value=""};
+window.serveNext=async()=>{if(s.current)return alert("Complete current vehicle first");if(!s.items.length)return alert("Queue is empty");s.current=s.items.shift();await save()};
+window.completeCurrent=async()=>{if(!s.current)return alert("No vehicle serving");s.current=null;s.completed=(s.completed||0)+1;await save()};
+window.changeTech=async(i,v)=>{if(s.items[i]){s.items[i].tech=v;await save()}};
+window.changeCurrentTech=async(v)=>{if(s.current){s.current.tech=v;await save()}};
+window.removeVehicle=async i=>{if(confirm("Remove this vehicle?")){s.items.splice(i,1);await save()}};
+window.clearQueue=async()=>{if(confirm("Clear all waiting vehicles?")){s.items=[];await save()}};
+function waiting(){if(!s.items.length)return"<div class='empty'>No vehicles waiting</div>";return`<table><tr><th>Token</th><th>Vehicle</th><th>Service</th><th>Technician</th><th></th></tr>${s.items.map((x,i)=>`<tr><td><b>${esc(x.token)}</b></td><td><b>${esc(x.vehicle)}</b><br><small>${esc(x.model)}</small></td><td>${esc(x.service)}</td><td><select onchange="changeTech(${i},this.value)">${opts(x.tech)}</select></td><td><button class="danger" onclick="removeVehicle(${i})">Remove</button></td></tr>`).join("")}</table>`}
+function render(){if(tv){app.innerHTML=`<div class="now"><div style="font-size:24px;font-weight:800">NOW SERVING</div><div class="token">${esc(s.current?.token||"—")}</div><div class="vehicle">${s.current?esc(s.current.vehicle)+" • "+esc(s.current.model):"Please wait"}</div><div class="tech">${s.current?"Technician: "+esc(s.current.tech):""}</div></div><div class="card"><h2>UP NEXT</h2>${s.items.length?`<table><tr><th>TOKEN</th><th>VEHICLE</th><th>SERVICE</th><th>TECHNICIAN</th></tr>${s.items.slice(0,8).map(x=>`<tr><td><b>${esc(x.token)}</b></td><td><b>${esc(x.vehicle)}</b> • ${esc(x.model)}</td><td>${esc(x.service)}</td><td><b>${esc(x.tech)}</b></td></tr>`).join("")}</table>`:"<div class='empty'>No vehicles waiting</div>"}</div>`}else{app.innerHTML=`<div class="mode"><button onclick="location.href=location.pathname">📱 Staff Control</button><button class="secondary" onclick="location.href=location.pathname+'?tv=1'">📺 TV Display</button></div><div class="card"><h2>Add Vehicle</h2><div class="grid"><input id="vehicle" placeholder="Vehicle number"><input id="model" placeholder="Vehicle model"><select id="service"><option>Wheel Alignment</option><option>Alignment + Balancing</option><option>Tyre Rotation</option><option>Wheel Check-up</option></select><select id="technician">${opts(techs[0])}</select></div><button class="full" onclick="addVehicle()">➕ ADD TO QUEUE</button></div><div class="card"><h2>Now Serving</h2><div class="now"><div class="token">${esc(s.current?.token||"—")}</div><div class="vehicle">${s.current?esc(s.current.vehicle)+" • "+esc(s.current.model):"No vehicle serving"}</div><div class="tech">${s.current?"Technician: "+esc(s.current.tech):""}</div>${s.current?`<select onchange="changeCurrentTech(this.value)" style="margin-top:12px">${opts(s.current.tech)}</select>`:""}</div><div class="grid" style="margin-top:10px"><button class="green" onclick="serveNext()">▶ SERVE NEXT</button><button class="secondary" onclick="completeCurrent()">✓ COMPLETE</button></div></div><div class="card"><h2>Next Queue <span class="badge">${s.items.length} waiting</span></h2>${waiting()}<button class="danger full" onclick="clearQueue()">CLEAR WAITING QUEUE</button></div>`}}
+render();
+</script>
+</body>
+</html>
